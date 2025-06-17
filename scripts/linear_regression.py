@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 class LinearRegression:
     """
@@ -43,18 +44,22 @@ class LinearRegression:
         """
         # Convert to numpy arrays
         X = np.array(X)
-        y = np.array(y)
+        y = np.array(y).reshape(-1, 1)  # Ensure y is a column vector
         
         # Add bias term
         X_with_bias = self._add_bias(X)
+        print(f"X_with_bias shape: {X_with_bias.shape}, y shape: {y.shape}")
         
         # Initialize parameters
         n_features = X_with_bias.shape[1]
-        self.theta = np.random.normal(0, 0.01, n_features)
+        self.theta = np.random.normal(0, 1, n_features).reshape(-1, 1) 
         
+
         # Gradient Descent
         m = X.shape[0]
         prev_cost = float('inf')
+
+        print(self.theta[:5])
         
         for i in range(self.max_iterations):
             # Forward pass
@@ -62,19 +67,26 @@ class LinearRegression:
             
             # Compute cost
             cost = self._compute_cost(X_with_bias, y)
+    
             self.cost_history.append(cost)
             
             # Compute gradients
             gradients = (1/m) * X_with_bias.T.dot(predictions - y)
-            
+
             # Update parameters
             self.theta -= self.learning_rate * gradients
-            
             # Check convergence
             if abs(prev_cost - cost) < self.tolerance:
                 print(f"Converged after {i+1} iterations")
                 break
             prev_cost = cost
+
+            print(f"Initial theta: {self.theta[:5]}")
+            print(f"First predictions: {predictions[:5]}")
+            print(f"First gradients: {gradients[:5]}")
+
+            break
+
         
         # Extract weights and bias
         self.bias = self.theta[0]
@@ -124,37 +136,46 @@ class LinearRegression:
 if __name__ == "__main__":
     # Generate sample data
     np.random.seed(42)
-    X = np.random.randn(100, 1)
-    y = 2 * X.ravel() + 1 + np.random.randn(100) * 0.1
+    # X = np.random.randn(100, 1)
+    # y = 2 * X.ravel() + 1 + np.random.randn(100) * 0.1
+
+    X = pd.read_csv("../data/HousingProcessed/X_train.csv").values
+    y = pd.read_csv("../data/HousingProcessed/y_train.csv").values.ravel()
+
+    print("Check NaNs/Infs in X:")
+    print(np.isnan(X).sum(), np.isinf(X).sum())
+
+    print("Check NaNs/Infs in y:")
+    print(np.isnan(y).sum(), np.isinf(y).sum())
     
-    # Create and train model
-    model = LinearRegression(learning_rate=0.1, max_iterations=1000)
-    model.fit(X, y)
+    # # Create and train model
+    # model = LinearRegression(learning_rate=0.00001, max_iterations=5000)
+    # model.fit(X, y)
     
-    # Make predictions
-    predictions = model.predict(X)
+    # # Make predictions
+    # predictions = model.predict(X)
     
-    # Print results
-    print(f"Weights: {model.weights}")
-    print(f"Bias: {model.bias}")
-    print(f"R-squared: {model.score(X, y):.4f}")
+    # # Print results
+    # print(f"Weights: {model.weights}")
+    # print(f"Bias: {model.bias}")
+    # print(f"R-squared: {model.score(X, y):.4f}")
     
-    # Plot results
-    plt.figure(figsize=(12, 4))
+    # # Plot results
+    # plt.figure(figsize=(12, 4))
     
-    plt.subplot(1, 2, 1)
-    plt.scatter(X, y, alpha=0.6, label='Data')
-    plt.plot(X, predictions, 'r-', label='Predictions')
-    plt.xlabel('X')
-    plt.ylabel('y')
-    plt.legend()
-    plt.title('Linear Regression Fit')
+    # plt.subplot(1, 2, 1)
+    # plt.scatter(X, y, alpha=0.6, label='Data')
+    # plt.plot(X, predictions, 'r-', label='Predictions')
+    # plt.xlabel('X')
+    # plt.ylabel('y')
+    # plt.legend()
+    # plt.title('Linear Regression Fit')
     
-    plt.subplot(1, 2, 2)
-    plt.plot(model.cost_history)
-    plt.xlabel('Iterations')
-    plt.ylabel('Cost')
-    plt.title('Cost History')
+    # plt.subplot(1, 2, 2)
+    # plt.plot(model.cost_history)
+    # plt.xlabel('Iterations')
+    # plt.ylabel('Cost')
+    # plt.title('Cost History')
     
-    plt.tight_layout()
-    plt.show()
+    # plt.tight_layout()
+    # plt.show()
