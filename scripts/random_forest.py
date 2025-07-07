@@ -1,12 +1,14 @@
+"""
+Random Forest classifier implemented from scratch with bootstrap sampling,
+feature importance analysis, and visualization capabilities.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import Counter
 import random
 
 class DecisionTreeRF:
-    """
-    Decision Tree for Random Forest (simplified version)
-    """
     
     def __init__(self, max_depth=10, min_samples_split=2, min_samples_leaf=1, 
                  max_features=None, criterion='gini'):
@@ -18,14 +20,12 @@ class DecisionTreeRF:
         self.tree = None
         
     def _gini_impurity(self, y):
-        """Calculate Gini impurity"""
         if len(y) == 0:
             return 0
         proportions = np.array([np.sum(y == c) for c in np.unique(y)]) / len(y)
         return 1 - np.sum(proportions**2)
     
     def _entropy(self, y):
-        """Calculate entropy"""
         if len(y) == 0:
             return 0
         proportions = np.array([np.sum(y == c) for c in np.unique(y)]) / len(y)
@@ -33,14 +33,12 @@ class DecisionTreeRF:
         return -np.sum(proportions * np.log2(proportions))
     
     def _calculate_impurity(self, y):
-        """Calculate impurity based on criterion"""
         if self.criterion == 'gini':
             return self._gini_impurity(y)
         else:
             return self._entropy(y)
     
     def _best_split(self, X, y, feature_indices):
-        """Find best split among selected features"""
         best_gain = 0
         best_feature = None
         best_threshold = None
@@ -57,7 +55,6 @@ class DecisionTreeRF:
                 if np.sum(left_mask) == 0 or np.sum(right_mask) == 0:
                     continue
                 
-                # Calculate information gain
                 parent_impurity = self._calculate_impurity(y)
                 n = len(y)
                 left_impurity = self._calculate_impurity(y[left_mask])
@@ -76,32 +73,27 @@ class DecisionTreeRF:
         return best_feature, best_threshold, best_gain
     
     def _build_tree(self, X, y, depth=0):
-        """Recursively build decision tree"""
         n_samples, n_features = X.shape
         n_classes = len(np.unique(y))
         
-        # Stopping criteria
         if (depth >= self.max_depth or 
             n_samples < self.min_samples_split or
             n_classes == 1):
             leaf_value = Counter(y).most_common(1)[0][0]
             return {'leaf': True, 'value': leaf_value}
         
-        # Random feature selection for Random Forest
         if self.max_features is None:
             feature_indices = list(range(n_features))
         else:
             feature_indices = random.sample(range(n_features), 
                                           min(self.max_features, n_features))
         
-        # Find best split
         best_feature, best_threshold, best_gain = self._best_split(X, y, feature_indices)
         
         if best_gain == 0:
             leaf_value = Counter(y).most_common(1)[0][0]
             return {'leaf': True, 'value': leaf_value}
         
-        # Split data
         left_mask = X[:, best_feature] <= best_threshold
         right_mask = ~left_mask
         
@@ -110,7 +102,6 @@ class DecisionTreeRF:
             leaf_value = Counter(y).most_common(1)[0][0]
             return {'leaf': True, 'value': leaf_value}
         
-        # Build subtrees
         left_subtree = self._build_tree(X[left_mask], y[left_mask], depth + 1)
         right_subtree = self._build_tree(X[right_mask], y[right_mask], depth + 1)
         
@@ -123,11 +114,9 @@ class DecisionTreeRF:
         }
     
     def fit(self, X, y):
-        """Train the decision tree"""
         self.tree = self._build_tree(X, y)
     
     def _predict_sample(self, x, tree):
-        """Predict single sample"""
         if tree['leaf']:
             return tree['value']
         
@@ -137,31 +126,14 @@ class DecisionTreeRF:
             return self._predict_sample(x, tree['right'])
     
     def predict(self, X):
-        """Predict multiple samples"""
         return np.array([self._predict_sample(x, self.tree) for x in X])
 
 
 class RandomForest:
-    """
-    Random Forest Classifier implementation from scratch
-    """
     
     def __init__(self, n_estimators=100, max_depth=10, min_samples_split=2,
                  min_samples_leaf=1, max_features='sqrt', bootstrap=True,
                  criterion='gini', random_state=None):
-        """
-        Initialize Random Forest
-        
-        Parameters:
-        n_estimators (int): Number of trees in the forest
-        max_depth (int): Maximum depth of trees
-        min_samples_split (int): Minimum samples required to split
-        min_samples_leaf (int): Minimum samples required at leaf
-        max_features (str/int): Number of features to consider ('sqrt', 'log2', int, or None)
-        bootstrap (bool): Whether to use bootstrap sampling
-        criterion (str): Splitting criterion ('gini' or 'entropy')
-        random_state (int): Random seed for reproducibility
-        """
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
@@ -179,7 +151,6 @@ class RandomForest:
             random.seed(random_state)
     
     def _get_max_features(self, n_features):
-        """Calculate number of features to use"""
         if self.max_features == 'sqrt':
             return int(np.sqrt(n_features))
         elif self.max_features == 'log2':
@@ -190,30 +161,24 @@ class RandomForest:
             return n_features
     
     def _bootstrap_sample(self, X, y):
-        """Create bootstrap sample"""
         n_samples = X.shape[0]
         bootstrap_indices = np.random.choice(n_samples, n_samples, replace=True)
         return X[bootstrap_indices], y[bootstrap_indices], bootstrap_indices
     
     def _calculate_oob_score(self, X, y, tree_predictions, bootstrap_indices_list):
-        """Calculate Out-of-Bag score"""
         oob_predictions = np.full(len(y), -1)
         oob_counts = np.zeros(len(y))
         
         for i, (tree, bootstrap_indices) in enumerate(zip(self.trees, bootstrap_indices_list)):
-            # Find out-of-bag samples
             oob_indices = np.setdiff1d(np.arange(len(y)), bootstrap_indices)
             
             if len(oob_indices) > 0:
-                # Make predictions on OOB samples
                 oob_pred = tree.predict(X[oob_indices])
                 
-                # Update OOB predictions (simple voting)
                 for j, idx in enumerate(oob_indices):
                     oob_predictions[idx] = oob_pred[j]
                     oob_counts[idx] += 1
         
-        # Calculate OOB accuracy (simplified)
         valid_oob = oob_counts > 0
         if np.sum(valid_oob) > 0:
             oob_accuracy = np.mean(oob_predictions[valid_oob] == y[valid_oob])
@@ -222,13 +187,6 @@ class RandomForest:
             return 0.0
     
     def fit(self, X, y):
-        """
-        Train the Random Forest
-        
-        Parameters:
-        X (array): Training features
-        y (array): Training labels
-        """
         X = np.array(X)
         y = np.array(y)
         n_samples, n_features = X.shape
@@ -240,12 +198,10 @@ class RandomForest:
         print(f"Training Random Forest with {self.n_estimators} trees...")
         print(f"Using {max_features} features per tree out of {n_features} total features")
         
-        # Train each tree
         for i in range(self.n_estimators):
             if (i + 1) % 20 == 0:
                 print(f"Training tree {i + 1}/{self.n_estimators}")
             
-            # Create bootstrap sample
             if self.bootstrap:
                 X_bootstrap, y_bootstrap, bootstrap_indices = self._bootstrap_sample(X, y)
                 bootstrap_indices_list.append(bootstrap_indices)
@@ -253,7 +209,6 @@ class RandomForest:
                 X_bootstrap, y_bootstrap = X, y
                 bootstrap_indices_list.append(np.arange(len(y)))
             
-            # Create and train tree
             tree = DecisionTreeRF(
                 max_depth=self.max_depth,
                 min_samples_split=self.min_samples_split,
@@ -265,10 +220,8 @@ class RandomForest:
             tree.fit(X_bootstrap, y_bootstrap)
             self.trees.append(tree)
         
-        # Calculate feature importances (simplified)
         self._calculate_feature_importances(X, y)
         
-        # Calculate OOB score if bootstrap is used
         if self.bootstrap:
             oob_score = self._calculate_oob_score(X, y, None, bootstrap_indices_list)
             print(f"Out-of-Bag Score: {oob_score:.4f}")
@@ -276,28 +229,23 @@ class RandomForest:
         print("Random Forest training completed!")
     
     def _calculate_feature_importances(self, X, y):
-        """Calculate feature importances (simplified version)"""
         n_features = X.shape[1]
         importances = np.zeros(n_features)
         
-        # For each feature, calculate how much it reduces impurity across all trees
         for feature_idx in range(n_features):
             feature_importance = 0
             
-            # Count how often this feature is used for splitting
             for tree in self.trees:
                 feature_importance += self._count_feature_usage(tree.tree, feature_idx)
             
             importances[feature_idx] = feature_importance
         
-        # Normalize importances
         if np.sum(importances) > 0:
             importances = importances / np.sum(importances)
         
         self.feature_importances_ = importances
     
     def _count_feature_usage(self, tree_node, feature_idx):
-        """Count how often a feature is used in tree (recursive)"""
         if tree_node['leaf']:
             return 0
         
@@ -308,21 +256,10 @@ class RandomForest:
         return count
     
     def predict(self, X):
-        """
-        Make predictions using majority voting
-        
-        Parameters:
-        X (array): Features to predict
-        
-        Returns:
-        array: Predicted labels
-        """
         X = np.array(X)
         
-        # Get predictions from all trees
         tree_predictions = np.array([tree.predict(X) for tree in self.trees])
         
-        # Majority voting
         predictions = []
         for i in range(X.shape[0]):
             votes = tree_predictions[:, i]
@@ -332,25 +269,13 @@ class RandomForest:
         return np.array(predictions)
     
     def predict_proba(self, X):
-        """
-        Predict class probabilities
-        
-        Parameters:
-        X (array): Features to predict
-        
-        Returns:
-        array: Class probabilities
-        """
         X = np.array(X)
         
-        # Get predictions from all trees
         tree_predictions = np.array([tree.predict(X) for tree in self.trees])
         
-        # Get unique classes
         unique_classes = np.unique(tree_predictions)
         n_classes = len(unique_classes)
         
-        # Calculate probabilities
         probabilities = np.zeros((X.shape[0], n_classes))
         
         for i in range(X.shape[0]):
@@ -363,12 +288,10 @@ class RandomForest:
         return probabilities
     
     def score(self, X, y):
-        """Calculate accuracy score"""
         predictions = self.predict(X)
         return np.mean(predictions == y)
     
     def plot_feature_importances(self, feature_names=None, top_n=None):
-        """Plot feature importances"""
         if self.feature_importances_ is None:
             print("Model must be fitted first")
             return
@@ -376,7 +299,6 @@ class RandomForest:
         if feature_names is None:
             feature_names = [f'Feature {i}' for i in range(len(self.feature_importances_))]
         
-        # Sort features by importance
         indices = np.argsort(self.feature_importances_)[::-1]
         
         if top_n is not None:
@@ -392,14 +314,12 @@ class RandomForest:
         plt.show()
     
     def plot_decision_boundary(self, X, y, resolution=0.02):
-        """Plot decision boundary for 2D data"""
         if X.shape[1] != 2:
             print("Decision boundary plot only available for 2D data")
             return
         
         plt.figure(figsize=(12, 8))
         
-        # Plot data points
         colors = ['red', 'blue', 'green', 'purple', 'orange']
         unique_labels = np.unique(y)
         
@@ -409,18 +329,15 @@ class RandomForest:
                        c=colors[i % len(colors)], alpha=0.7, s=50, 
                        label=f'Class {label}')
         
-        # Create mesh for decision boundary
         x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
         y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
         xx, yy = np.meshgrid(np.arange(x_min, x_max, resolution),
                             np.arange(y_min, y_max, resolution))
         
-        # Make predictions on mesh
         mesh_points = np.c_[xx.ravel(), yy.ravel()]
         Z = self.predict(mesh_points)
         Z = Z.reshape(xx.shape)
         
-        # Plot decision boundary
         plt.contourf(xx, yy, Z, alpha=0.3, levels=len(unique_labels)-1)
         plt.xlabel('Feature 1')
         plt.ylabel('Feature 2')
@@ -430,7 +347,6 @@ class RandomForest:
         plt.show()
     
     def plot_tree_predictions(self, X, y, n_trees_to_show=4):
-        """Show predictions from individual trees vs ensemble"""
         if X.shape[1] != 2:
             print("Tree prediction plot only available for 2D data")
             return
@@ -443,14 +359,11 @@ class RandomForest:
         colors = ['red', 'blue', 'green', 'purple', 'orange']
         unique_labels = np.unique(y)
         
-        # Plot individual trees
         for i in range(n_trees_to_show):
             ax = axes[i]
             
-            # Get predictions from single tree
             tree_pred = self.trees[i].predict(X)
             
-            # Plot data points colored by single tree prediction
             for j, label in enumerate(unique_labels):
                 mask = tree_pred == label
                 ax.scatter(X[mask, 0], X[mask, 1], 
@@ -461,7 +374,6 @@ class RandomForest:
             ax.set_ylabel('Feature 2')
             ax.grid(True, alpha=0.3)
         
-        # Plot ensemble prediction
         ax = axes[4]
         ensemble_pred = self.predict(X)
         
@@ -475,7 +387,6 @@ class RandomForest:
         ax.set_ylabel('Feature 2')
         ax.grid(True, alpha=0.3)
         
-        # Plot true labels
         ax = axes[5]
         for j, label in enumerate(unique_labels):
             mask = y == label
@@ -492,26 +403,22 @@ class RandomForest:
         plt.tight_layout()
         plt.show()
 
-# Example usage
+
 if __name__ == "__main__":
     print("=== Random Forest Classifier Example ===")
     
-    # Generate sample data
     np.random.seed(42)
     from sklearn.datasets import make_classification, make_circles, make_moons
     
-    # Multi-class classification dataset
     X_class, y_class = make_classification(n_samples=1000, n_features=10, 
                                          n_informative=8, n_redundant=2,
                                          n_classes=3, n_clusters_per_class=1, 
                                          random_state=42)
     
-    # Split data
     split_idx = int(0.8 * len(X_class))
     X_train, X_test = X_class[:split_idx], X_class[split_idx:]
     y_train, y_test = y_class[:split_idx], y_class[split_idx:]
     
-    # Create and train Random Forest
     rf = RandomForest(
         n_estimators=50,
         max_depth=8,
@@ -523,18 +430,15 @@ if __name__ == "__main__":
     
     rf.fit(X_train, y_train)
     
-    # Evaluate
     train_accuracy = rf.score(X_train, y_train)
     test_accuracy = rf.score(X_test, y_test)
     
     print(f"Train Accuracy: {train_accuracy:.4f}")
     print(f"Test Accuracy: {test_accuracy:.4f}")
     
-    # Plot feature importances
     feature_names = [f'Feature_{i}' for i in range(X_class.shape[1])]
     rf.plot_feature_importances(feature_names, top_n=8)
     
-    # 2D visualization with circles dataset
     print("\n=== 2D Visualization Example ===")
     X_2d, y_2d = make_circles(n_samples=400, noise=0.1, factor=0.3, random_state=42)
     
@@ -549,15 +453,12 @@ if __name__ == "__main__":
     
     print(f"2D Dataset Accuracy: {rf_2d.score(X_2d, y_2d):.4f}")
     
-    # Plot decision boundary
     rf_2d.plot_decision_boundary(X_2d, y_2d)
     
-    # Show individual tree predictions vs ensemble
     rf_2d.plot_tree_predictions(X_2d, y_2d, n_trees_to_show=4)
     
     print("\n=== Comparing Different Configurations ===")
     
-    # Compare different numbers of trees
     n_estimators_list = [5, 10, 25, 50, 100]
     estimator_results = []
     
@@ -568,7 +469,6 @@ if __name__ == "__main__":
         estimator_results.append((n_est, accuracy))
         print(f"n_estimators={n_est}: Test Accuracy = {accuracy:.4f}")
     
-    # Plot results
     n_est_values = [x[0] for x in estimator_results]
     accuracies = [x[1] for x in estimator_results]
     
@@ -593,7 +493,6 @@ if __name__ == "__main__":
         feature_results.append((str(max_feat), accuracy))
         print(f"max_features={max_feat}: Test Accuracy = {accuracy:.4f}")
     
-    # Plot max features comparison
     feat_names = [x[0] for x in feature_results]
     feat_accuracies = [x[1] for x in feature_results]
     
@@ -611,7 +510,6 @@ if __name__ == "__main__":
     
     print("\n=== Bootstrap vs No Bootstrap ===")
     
-    # Compare bootstrap vs no bootstrap
     rf_bootstrap = RandomForest(n_estimators=30, bootstrap=True, random_state=42)
     rf_no_bootstrap = RandomForest(n_estimators=30, bootstrap=False, random_state=42)
     
@@ -626,7 +524,6 @@ if __name__ == "__main__":
     
     print("\n=== Moons Dataset Example ===")
     
-    # Test on moons dataset (non-linear)
     X_moons, y_moons = make_moons(n_samples=300, noise=0.2, random_state=42)
     
     rf_moons = RandomForest(n_estimators=50, max_depth=8, random_state=42)
@@ -635,5 +532,4 @@ if __name__ == "__main__":
     moons_accuracy = rf_moons.score(X_moons, y_moons)
     print(f"Moons Dataset Accuracy: {moons_accuracy:.4f}")
     
-    # Plot decision boundary for moons
     rf_moons.plot_decision_boundary(X_moons, y_moons)

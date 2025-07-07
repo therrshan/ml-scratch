@@ -6,8 +6,9 @@ Custom machine learning algorithms implemented from scratch using only NumPy and
 
 ```
 ml-scratch/
-├── notebooks/        # Dataset-specific implementations
+├── notebooks/        # Dataset-specific implementations of some of the ml algorithms
 └── scripts/          # Core algorithm implementations
+└── optimizers/       # Optimization algorithm implementations
 ```
 
 ## Algorithms
@@ -15,17 +16,24 @@ ml-scratch/
 ### Supervised Learning
 - Linear Regression
 - Logistic Regression  
-- Neural Network
+- Multimodal Logistic Regression
+- Multi Layer Perceptron
 - Random Forest
 - XGBoost
 - K-Nearest Neighbors
 - Decision Tree
 - Naive Bayes
 - Support Vector Machine
+- ADA Boost
+- Gradient Boosting Regressor
 
 ### Unsupervised Learning
 - K-Means Clustering
+- DBSCAN
+
+### Dimensionality Reduction
 - Principal Component Analysis
+- t-SNE
 
 ## Features
 
@@ -34,16 +42,4 @@ ml-scratch/
 - Built-in visualization tools
 - Comprehensive documentation
 - Real dataset applications
-
-## Usage
-
-1. Navigate to `notebooks/[dataset]/`
-2. Run data cleaning notebook
-3. Apply algorithms in ML notebook
-4. Analyze results
-
-Each algorithm script is standalone and can be imported directly.
-
-## Purpose
-
-Educational resource demonstrating ML algorithm internals with practical applications on real datasets.
+- Each algorithm script is standalone and can be imported directly.
