@@ -1,7 +1,6 @@
 """
 Adagrad (Adaptive Gradient) optimizer implementation.
 Adapts learning rate based on historical gradients for each parameter.
-Includes a demo on sparse gradient optimization problem with visualization.
 """
 
 import numpy as np
